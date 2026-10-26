@@ -19,7 +19,7 @@ import {
 
 const repo = "https://github.com/m-uvex/loaf-fm";
 const devRepo = `${repo}/tree/dev`;
-const installCommand = "curl -sSL https://raw.githubusercontent.com/m-uvex/loaf-fm/dev/install.sh | bash";
+const installCommand = "curl -sSL https://raw.githubusercontent.com/m-uvex/loaf-fm/main/install.sh | bash";
 
 const features = [
   {
