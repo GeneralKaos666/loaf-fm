@@ -76,6 +76,15 @@ jobs:
             echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Resolve release notes
+        id: notes
+        run: |
+          if [ -f "packaging/release-notes/${{ steps.tag.outputs.tag }}.md" ]; then
+            echo "path=packaging/release-notes/${{ steps.tag.outputs.tag }}.md" >> $GITHUB_OUTPUT
+          else
+            echo "path=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -83,8 +92,10 @@ jobs:
           name: "Loaf ${{ steps.tag.outputs.tag }}"
           draft: false
           prerelease: false
+          body_path: ${{ steps.notes.outputs.path }}
+          generate_release_notes: ${{ steps.notes.outputs.path == '' }}
           files: |
-            packaging/dist/loaf-*.deb
+            packaging/dist/loaf_*.deb
             packaging/dist/loaf-*.rpm
             packaging/dist/loaf-*.pkg.tar.zst
             packaging/dist/loaf-*.tar.gz
