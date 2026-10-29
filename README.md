@@ -61,6 +61,26 @@ The easiest way to install Loaf is through our interactive management script:
 curl -sSL https://raw.githubusercontent.com/m-uvex/loaf-fm/main/install.sh | bash
 ```
 
+### Termux (Android)
+
+Release binaries are glibc builds and cannot run on Android/Bionic, so the
+installer detects Termux and builds Loaf from source with `cargo`, installing
+it into `$PREFIX/bin`. Build dependencies are installed automatically with
+`pkg`; Qt 6 comes from the `x11-repo`.
+
+```bash
+curl -sSL https://raw.githubusercontent.com/m-uvex/loaf-fm/main/install.sh | bash
+```
+
+Loaf still needs a graphical display at runtime. Start Termux:X11 first, then
+launch it with `DISPLAY` set:
+
+```bash
+termux-x11 :0 &
+export DISPLAY=:0
+loaf
+```
+
 ---
 
 ## Alternative Manual Installation Methods
