@@ -26,3 +26,4 @@ packaging/dist/*.deb
 # Media showcase
 assets/showcase/
 showcase/
+AGENTS.md
