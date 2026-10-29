@@ -102,6 +102,19 @@ fn copy_data(src: &mut fs::File, dst: &mut fs::File, path: &Path, mon: &dyn Moni
             return Err(cancelled_err());
         }
         if use_range {
+            #[cfg(target_os = "android")]
+            let n: libc::ssize_t = unsafe {
+                libc::syscall(
+                    libc::SYS_copy_file_range,
+                    src.as_raw_fd(),
+                    std::ptr::null_mut::<libc::loff_t>(),
+                    dst.as_raw_fd(),
+                    std::ptr::null_mut::<libc::loff_t>(),
+                    CHUNK as libc::size_t,
+                    0u32,
+                ) as libc::ssize_t
+            };
+            #[cfg(not(target_os = "android"))]
             let n = unsafe {
                 libc::copy_file_range(
                     src.as_raw_fd(),
@@ -220,6 +233,15 @@ pub fn remove_tree(path: &Path) -> io::Result<()> {
 /// device (important before a USB stick is pulled out).
 pub fn sync_filesystem(path: &Path) {
     let dir = if path.is_dir() { path } else { path.parent().unwrap_or(path) };
+    #[cfg(target_os = "android")]
+    {
+        // Bionic doesn't expose syncfs; best-effort: sync()
+        unsafe {
+            libc::sync();
+        }
+        let _ = dir;
+    }
+    #[cfg(not(target_os = "android"))]
     if let Ok(f) = fs::File::open(dir) {
         unsafe {
             libc::syncfs(f.as_raw_fd());
@@ -345,23 +367,33 @@ pub fn replace_with_link(src: &Path, dst: &Path) -> io::Result<()> {
 /// `AlreadyExists` instead). A plain rename would silently replace an empty
 /// folder or file that appeared at `to` meanwhile.
 pub fn rename_noreplace(from: &Path, to: &Path) -> io::Result<()> {
-    use std::os::unix::ffi::OsStrExt;
-    let a = std::ffi::CString::new(from.as_os_str().as_bytes())?;
-    let b = std::ffi::CString::new(to.as_os_str().as_bytes())?;
-    let r = unsafe { libc::renameat2(libc::AT_FDCWD, a.as_ptr(), libc::AT_FDCWD, b.as_ptr(), libc::RENAME_NOREPLACE) };
-    if r == 0 {
-        return Ok(());
-    }
-    let e = io::Error::last_os_error();
-    match e.raw_os_error() {
-        // Filesystem without RENAME_NOREPLACE support: best effort.
-        Some(libc::EINVAL) | Some(libc::ENOSYS) => {
-            if fs::symlink_metadata(to).is_ok() {
-                return Err(io::Error::from(io::ErrorKind::AlreadyExists));
-            }
-            fs::rename(from, to)
+    
+    #[cfg(target_os = "android")]
+    {
+        if fs::symlink_metadata(to).is_ok() {
+            return Err(io::Error::from(io::ErrorKind::AlreadyExists));
         }
-        _ => Err(e),
+        return fs::rename(from, to);
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let a = std::ffi::CString::new(from.as_os_str().as_bytes())?;
+        let b = std::ffi::CString::new(to.as_os_str().as_bytes())?;
+        let r = unsafe { libc::renameat2(libc::AT_FDCWD, a.as_ptr(), libc::AT_FDCWD, b.as_ptr(), libc::RENAME_NOREPLACE) };
+        if r == 0 {
+            return Ok(());
+        }
+        let e = io::Error::last_os_error();
+        match e.raw_os_error() {
+            // Filesystem without RENAME_NOREPLACE support: best effort.
+            Some(libc::EINVAL) | Some(libc::ENOSYS) => {
+                if fs::symlink_metadata(to).is_ok() {
+                    return Err(io::Error::from(io::ErrorKind::AlreadyExists));
+                }
+                fs::rename(from, to)
+            }
+            _ => Err(e),
+        }
     }
 }
 

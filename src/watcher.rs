@@ -116,6 +116,9 @@ impl DirWatcher {
         let old = self.wd.swap(-1, Ordering::SeqCst);
         if old >= 0 {
             unsafe {
+                #[cfg(target_os = "android")]
+                libc::inotify_rm_watch(self.fd, old as u32);
+                #[cfg(not(target_os = "android"))]
                 libc::inotify_rm_watch(self.fd, old);
             }
         }
@@ -128,6 +131,9 @@ impl DirWatcher {
         let old = self.wd.swap(-1, Ordering::SeqCst);
         if old >= 0 {
             unsafe {
+                #[cfg(target_os = "android")]
+                libc::inotify_rm_watch(self.fd, old as u32);
+                #[cfg(not(target_os = "android"))]
                 libc::inotify_rm_watch(self.fd, old);
             }
         }

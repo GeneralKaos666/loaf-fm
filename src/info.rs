@@ -149,6 +149,9 @@ fn user_name(uid: u32) -> String {
     let mut buf = vec![0i8; 4096];
     let mut pw: libc::passwd = unsafe { std::mem::zeroed() };
     let mut out: *mut libc::passwd = std::ptr::null_mut();
+    #[cfg(target_os = "android")]
+    let rc = unsafe { libc::getpwuid_r(uid, &mut pw, buf.as_mut_ptr() as *mut u8, buf.len(), &mut out) };
+    #[cfg(not(target_os = "android"))]
     let rc = unsafe { libc::getpwuid_r(uid, &mut pw, buf.as_mut_ptr(), buf.len(), &mut out) };
     if rc == 0 && !out.is_null() {
         return unsafe { std::ffi::CStr::from_ptr(pw.pw_name) }.to_string_lossy().to_string();
@@ -160,6 +163,9 @@ fn group_name(gid: u32) -> String {
     let mut buf = vec![0i8; 4096];
     let mut gr: libc::group = unsafe { std::mem::zeroed() };
     let mut out: *mut libc::group = std::ptr::null_mut();
+    #[cfg(target_os = "android")]
+    let rc = unsafe { libc::getgrgid_r(gid, &mut gr, buf.as_mut_ptr() as *mut u8, buf.len(), &mut out) };
+    #[cfg(not(target_os = "android"))]
     let rc = unsafe { libc::getgrgid_r(gid, &mut gr, buf.as_mut_ptr(), buf.len(), &mut out) };
     if rc == 0 && !out.is_null() {
         return unsafe { std::ffi::CStr::from_ptr(gr.gr_name) }.to_string_lossy().to_string();
